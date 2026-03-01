@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# VS Code MCP config (may contain API keys)
+.vscode/mcp.json
+
 # dependencies
 /node_modules
 /.pnp
