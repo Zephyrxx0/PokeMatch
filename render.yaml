@@ -2,9 +2,8 @@ services:
   - type: web
     name: pokemon-api
     runtime: python
-    rootDir: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --workers 2 api.server:app
+    buildCommand: pip install -r python/requirements.txt
+    startCommand: gunicorn --chdir python/api server:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
