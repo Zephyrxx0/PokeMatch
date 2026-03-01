@@ -110,67 +110,11 @@ export default function PersonalityResultCard({
         </div>
       </div>
 
-      {/* Score breakdown */}
-      <div className="border-3 border-foreground p-5 mb-6">
-        <h3 className="text-xs font-bold uppercase tracking-widest opacity-60 mb-4">
-          [02] SCORE BREAKDOWN
-        </h3>
-        <div className="space-y-3">
-          {SCORE_BARS.map(({ key, label }) => (
-            <div key={key}>
-              <div className="flex justify-between mb-1">
-                <span className="text-[9px] font-bold uppercase opacity-50">
-                  {label}
-                </span>
-                <span className="text-[9px] font-bold">
-                  {scores[key]}%
-                </span>
-              </div>
-              <div className="h-4 bg-foreground/10 border border-foreground/20">
-                <div
-                  className="h-full transition-all duration-1000 ease-out"
-                  style={{
-                    width: `${scores[key]}%`,
-                    backgroundColor: archetype.typeColor,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-[9px] font-bold uppercase opacity-30 mt-3">
-          TYPE AFFINITY: {typeAffinity.toUpperCase()}
-        </p>
-      </div>
-
-      {/* Your picks */}
-      <div className="border-3 border-foreground p-5 mb-6">
-        <h3 className="text-xs font-bold uppercase tracking-widest opacity-60 mb-4">
-          [03] YOUR PICKS
-        </h3>
-        <div className="flex justify-center gap-6">
-          {pokemon.map((p) => (
-            <div key={p.id} className="text-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={getSpriteUrl(p.id)}
-                alt={p.name}
-                className="h-20 w-20 mx-auto"
-                style={{ imageRendering: "pixelated" }}
-              />
-              <p className="text-[10px] font-bold uppercase mt-1">
-                {p.name}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* MBTI Profile */}
       {mbti && (
         <div className="border-3 border-foreground p-5 mb-6">
           <h3 className="text-xs font-bold uppercase tracking-widest opacity-60 mb-4">
-            [04] MBTI PROFILE
+            [02] MBTI PROFILE
           </h3>
 
           <div className="flex items-center gap-4 mb-4">
@@ -249,6 +193,62 @@ export default function PersonalityResultCard({
           </div>
         </div>
       )}
+
+      {/* Score breakdown */}
+      <div className="border-3 border-foreground p-5 mb-6">
+        <h3 className="text-xs font-bold uppercase tracking-widest opacity-60 mb-4">
+          [03] SCORE BREAKDOWN
+        </h3>
+        <div className="space-y-3">
+          {SCORE_BARS.map(({ key, label }) => (
+            <div key={key}>
+              <div className="flex justify-between mb-1">
+                <span className="text-[9px] font-bold uppercase opacity-50">
+                  {label}
+                </span>
+                <span className="text-[9px] font-bold">
+                  {scores[key]}%
+                </span>
+              </div>
+              <div className="h-4 bg-foreground/10 border border-foreground/20">
+                <div
+                  className="h-full transition-all duration-1000 ease-out"
+                  style={{
+                    width: `${scores[key]}%`,
+                    backgroundColor: archetype.typeColor,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[9px] font-bold uppercase opacity-30 mt-3">
+          TYPE AFFINITY: {typeAffinity.toUpperCase()}
+        </p>
+      </div>
+
+      {/* Your picks */}
+      <div className="border-3 border-foreground p-5 mb-6">
+        <h3 className="text-xs font-bold uppercase tracking-widest opacity-60 mb-4">
+          [04] YOUR PICKS
+        </h3>
+        <div className="flex justify-center gap-6">
+          {pokemon.map((p) => (
+            <div key={p.id} className="text-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getSpriteUrl(p.id)}
+                alt={p.name}
+                className="h-20 w-20 mx-auto"
+                style={{ imageRendering: "pixelated" }}
+              />
+              <p className="text-[10px] font-bold uppercase mt-1">
+                {p.name}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Actions */}
       <div className="flex gap-3">

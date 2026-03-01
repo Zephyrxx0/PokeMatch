@@ -8,6 +8,7 @@ import {
   fillTeam,
 } from "@/app/lib/api";
 import type { Pokemon } from "@/app/types/pokemon";
+import { getAllPokemon } from "@/app/lib/pokemonData";
 
 import PlaystyleSelector from "@/app/components/PlaystyleSelector";
 import PokemonSearch from "@/app/components/PokemonSearch";
@@ -38,6 +39,8 @@ export default function BuildPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lockedIds, setLockedIds] = useState<Set<number>>(new Set());
+  const [rejectedSuggestIds, setRejectedSuggestIds] = useState<Set<number>>(new Set());
+  const [lastSuggestedId, setLastSuggestedId] = useState<number | null>(null);
 
   useEffect(() => {
     checkHealth().then(setBackendOnline);
@@ -81,10 +84,11 @@ export default function BuildPage() {
           next.delete(p.id);
           return next;
         });
+        if (p.id === lastSuggestedId) setLastSuggestedId(null);
       }
       removePokemon(index);
     },
-    [team, removePokemon]
+    [team, removePokemon, lastSuggestedId]
   );
 
   const handleSuggestOne = useCallback(async () => {
@@ -92,17 +96,18 @@ export default function BuildPage() {
     setLoading(true);
     setError(null);
     try {
-      const partialIds = team.map((p) => p.id);
-      const result = await fillTeam(partialIds, playstyle, 1);
+      const excludeIds = [...team.map((p) => p.id), ...Array.from(rejectedSuggestIds)];
+      const result = await fillTeam(excludeIds, playstyle, 1);
       for (const p of result.pokemon) {
         addPokemon(p);
+        setLastSuggestedId(p.id);
       }
     } catch {
       setError("BACKEND ERROR — COULD NOT SUGGEST");
     } finally {
       setLoading(false);
     }
-  }, [backendOnline, team, playstyle, addPokemon]);
+  }, [backendOnline, team, playstyle, addPokemon, rejectedSuggestIds]);
 
   const handleFillTeam = useCallback(async () => {
     if (!backendOnline) return;
@@ -123,9 +128,68 @@ export default function BuildPage() {
     }
   }, [backendOnline, team, playstyle, addPokemon]);
 
+  const handleRerollTeam = useCallback(async () => {
+    if (!backendOnline || !playstyle) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const currentIds = team.map((p) => p.id);
+      const result = await fillTeam(currentIds, playstyle, 6);
+      setTeam(result.pokemon);
+    } catch {
+      setError("BACKEND ERROR — COULD NOT REROLL");
+    } finally {
+      setLoading(false);
+    }
+  }, [backendOnline, playstyle, team, setTeam]);
+
+  const handleRerollSuggestOne = useCallback(async () => {
+    if (!backendOnline || lastSuggestedId == null) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const newRejected = new Set(rejectedSuggestIds);
+      newRejected.add(lastSuggestedId);
+      setRejectedSuggestIds(newRejected);
+
+      const idx = team.findIndex((p) => p.id === lastSuggestedId);
+      if (idx !== -1) removePokemon(idx);
+      setLastSuggestedId(null);
+
+      const remainingIds = team.filter((p) => p.id !== lastSuggestedId).map((p) => p.id);
+      const excludeIds = [...remainingIds, ...Array.from(newRejected)];
+      const result = await fillTeam(excludeIds, playstyle, 1);
+      for (const p of result.pokemon) {
+        addPokemon(p);
+        setLastSuggestedId(p.id);
+      }
+    } catch {
+      setError("BACKEND ERROR — COULD NOT REROLL SUGGESTION");
+    } finally {
+      setLoading(false);
+    }
+  }, [backendOnline, lastSuggestedId, rejectedSuggestIds, team, playstyle, removePokemon, addPokemon]);
+
+  const handleRandomTeam = useCallback(() => {
+    const all = getAllPokemon();
+    // Fisher-Yates shuffle
+    const shuffled = [...all];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const locked = team.filter((p) => lockedIds.has(p.id));
+    const lockedIdSet = new Set(locked.map((p) => p.id));
+    const slotsNeeded = 6 - locked.length;
+    const picks = shuffled.filter((p) => !lockedIdSet.has(p.id)).slice(0, slotsNeeded);
+    setTeam([...locked, ...picks]);
+  }, [team, lockedIds, setTeam]);
+
   const handleModeSwitch = useCallback(
     (m: BuildMode) => {
       setMode(m);
+      setRejectedSuggestIds(new Set());
+      setLastSuggestedId(null);
       if (m === "archetype") {
         setLockedIds(new Set());
       } else {
@@ -139,6 +203,8 @@ export default function BuildPage() {
   const handleClearTeam = useCallback(() => {
     clearTeam();
     setLockedIds(new Set());
+    setRejectedSuggestIds(new Set());
+    setLastSuggestedId(null);
   }, [clearTeam]);
 
   const disabledIds = new Set(team.map((p) => p.id));
@@ -199,22 +265,32 @@ export default function BuildPage() {
             </button>
             {mode === "archetype" && backendOnline && (
               <button
-                onClick={() => handlePlaystyleSelect(playstyle)}
-                disabled={loading}
+                onClick={handleRerollTeam}
+                disabled={loading || !playstyle}
                 className="border-2 border-foreground px-3 py-1.5 text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-colors disabled:opacity-30"
               >
-                {loading ? "GENERATING..." : "REGENERATE"}
+                {loading ? "REROLLING..." : "REROLL ↺"}
               </button>
             )}
             {mode === "custom" && backendOnline && (
               <>
-                <button
-                  onClick={handleSuggestOne}
-                  disabled={loading || slotsRemaining <= 0}
-                  className="border-2 border-[#6890F0] text-[#6890F0] px-3 py-1.5 text-[10px] font-bold uppercase hover:bg-[#6890F0] hover:text-white transition-colors disabled:opacity-30"
-                >
-                  {loading ? "..." : "SUGGEST 1 →"}
-                </button>
+                <div className="flex gap-0">
+                  <button
+                    onClick={handleSuggestOne}
+                    disabled={loading || slotsRemaining <= 0}
+                    className="border-2 border-[#6890F0] text-[#6890F0] px-3 py-1.5 text-[10px] font-bold uppercase hover:bg-[#6890F0] hover:text-white transition-colors disabled:opacity-30"
+                  >
+                    {loading ? "..." : "SUGGEST 1 →"}
+                  </button>
+                  <button
+                    onClick={handleRerollSuggestOne}
+                    disabled={loading || lastSuggestedId == null}
+                    className="border-2 border-l-0 border-[#6890F0] text-[#6890F0] px-2 py-1.5 text-[10px] font-bold uppercase hover:bg-[#6890F0] hover:text-white transition-colors disabled:opacity-30"
+                    title="Reroll last suggestion"
+                  >
+                    ↺
+                  </button>
+                </div>
                 <button
                   onClick={handleFillTeam}
                   disabled={loading || slotsRemaining <= 0}
@@ -223,6 +299,12 @@ export default function BuildPage() {
                   {loading
                     ? "FILLING..."
                     : `FILL TEAM (${slotsRemaining} more)`}
+                </button>
+                <button
+                  onClick={handleRandomTeam}
+                  className="border-2 border-foreground px-3 py-1.5 text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-colors"
+                >
+                  RANDOM ↺
                 </button>
               </>
             )}
